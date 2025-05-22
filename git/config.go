@@ -4,13 +4,6 @@ import (
 	"time"
 )
 
-type CommitHash struct {
-	Url  string
-	Ref  string
-	Path string
-	Hash string 
-}
-
 type AuthorConfig struct {
 	Name  string
 	Email string
@@ -22,9 +15,9 @@ type CommitSignatureConfig struct {
 }
 
 type GitAuth struct {
-	SshKeyPath     string `yaml:"ssh_key_path"`
-	KnownHostsPath string `yaml:"known_hosts_path"`
-	User           string
+	SshKey   string `yaml:"ssh_key"`
+	KnownKey string `yaml:"known_key"`
+	User     string
 }
 
 type GitConfig struct {
@@ -32,7 +25,7 @@ type GitConfig struct {
 	Ref                string
 	Path               string
 	Auth               GitAuth
-	GpgPublicKeysPaths []string              `yaml:"gpg_public_keys_paths"`
+	AcceptedSignatures string                `yaml:"accepted_signatures"`
 	Author             AuthorConfig
 	CommitSignature    CommitSignatureConfig `yaml:"commit_signature"`
 	CommitMessage      string                `yaml:"commit_message"`

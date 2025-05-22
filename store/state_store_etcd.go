@@ -22,7 +22,7 @@ type StoreEtcd[T any] struct {
 func (store *StoreEtcd[T]) Initialize() error {
 	passErr := store.Config.Auth.ResolvePassword()
 	if passErr != nil {
-		return passErr
+		return errors.New(fmt.Sprintf("Error retrieving etcd store password credentials: %s", passErr.Error()))
 	}
 
 	cli, cliErr := client.Connect(context.Background(), client.EtcdClientOptions{
@@ -37,9 +37,12 @@ func (store *StoreEtcd[T]) Initialize() error {
 		RetryInterval:     store.Config.RetryInterval,
 		Retries:           store.Config.Retries,
 	})
+	if cliErr != nil {
+		return errors.New(fmt.Sprintf("Error connecting to etcd store: %s", cliErr.Error()))
+	}
 
 	store.client = cli
-	return cliErr
+	return nil
 }
 
 func (store *StoreEtcd[T]) ReadContent() (T, error) {
@@ -47,7 +50,7 @@ func (store *StoreEtcd[T]) ReadContent() (T, error) {
 
 	keyInfo, err := store.client.GetKey(path.Join(store.Config.Prefix, store.Key), client.GetKeyOptions{})
 	if err != nil {
-		return content, errors.New(fmt.Sprintf("Error retrieving content info: %s", err.Error()))
+		return content, errors.New(fmt.Sprintf("Error reading etcd store content: %s", err.Error()))
 	}
 
 	if !keyInfo.Found() {
@@ -56,7 +59,7 @@ func (store *StoreEtcd[T]) ReadContent() (T, error) {
 
 	err = yaml.Unmarshal([]byte(keyInfo.Value), &content)
 	if err != nil {
-		return content, errors.New(fmt.Sprintf("Error deserializing content info: %s", err.Error()))
+		return content, errors.New(fmt.Sprintf("Error deserializing etcd store content: %s", err.Error()))
 	}
 
 	return content, nil
@@ -65,19 +68,23 @@ func (store *StoreEtcd[T]) ReadContent() (T, error) {
 func (store *StoreEtcd[T]) WriteContent(content T) error {
 	output, err := yaml.Marshal(&content)
 	if err != nil {
-		return errors.New(fmt.Sprintf("Error serializing the content info: %s", err.Error()))
+		return errors.New(fmt.Sprintf("Error serializing etcd store content: %s", err.Error()))
 	}
 
 	_, err = store.client.PutKey(path.Join(store.Config.Prefix, store.Key), string(output))
 	if err != nil {
-		return errors.New(fmt.Sprintf("Error writing the content file: %s", err.Error()))
+		return errors.New(fmt.Sprintf("Error writing etcd store content: %s", err.Error()))
 	}
 
 	return nil
 }
 
 func (store *StoreEtcd[T]) Cleanup() error {
-	store.client.Close()
+	closeErr := store.client.Close()
+	if closeErr != nil {
+		return errors.New(fmt.Sprintf("Error disconnecting from etcd store: %s", closeErr.Error()))
+	}
+
 	return nil
 }
 
@@ -88,9 +95,18 @@ func (store *StoreEtcd[T]) Lock() error {
 		Timeout: store.Config.RequestTimeout,
 		RetryInterval: store.Config.RetryInterval,
 	})
-	return lockErr
+	if lockErr != nil {
+		return errors.New(fmt.Sprintf("Error acquiring lock on etcd store content: %s", lockErr.Error()))
+	}
+
+	return nil
 }
 
 func (store *StoreEtcd[T]) ReleaseLock() error {
-	return store.client.ReleaseLock(path.Join(store.Config.Prefix, store.LockKey))
+	relErr := store.client.ReleaseLock(path.Join(store.Config.Prefix, store.LockKey))
+	if relErr != nil {
+		return errors.New(fmt.Sprintf("Error releasing lock on etcd store content: %s", relErr.Error()))
+	}
+
+	return nil
 }

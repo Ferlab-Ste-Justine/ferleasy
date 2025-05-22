@@ -68,7 +68,7 @@ func (ent *Entry) CheckPolicy(policy *EntryPolicy) error {
 	return nil
 }
 
-func (ent *Entry) ApplyPolicy(policy *EntryPolicy) error {
+func (ent *Entry) ApplyPolicyDefaults(policy *EntryPolicy) {
 	if ent.Environment == "" && policy.Default.Environment != "" {
 		ent.Environment = policy.Default.Environment
 	}
@@ -86,6 +86,10 @@ func (ent *Entry) ApplyPolicy(policy *EntryPolicy) error {
 			ent.CustomParams[key] = val
 		}
 	}
+}
+
+func (ent *Entry) ApplyPolicy(policy *EntryPolicy) error {
+	ent.ApplyPolicyDefaults(policy)
 
 	return ent.CheckPolicy(policy)
 }

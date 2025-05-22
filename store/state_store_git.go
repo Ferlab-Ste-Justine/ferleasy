@@ -18,12 +18,12 @@ type StoreGit[T any] struct {
 
 func (store *StoreGit[T]) Initialize() error {
 	sshCreds, sshCredsErr := git.GetSshCredentials(
-		store.Config.Auth.SshKeyPath,
-		store.Config.Auth.KnownHostsPath,
+		gitutils.ExpanHomeDir(store.Config.Auth.SshKey),
+		gitutils.ExpanHomeDir(store.Config.Auth.KnownKey),
 		store.Config.Auth.User,
 	)
 	if sshCredsErr != nil {
-		return sshCredsErr
+		return errors.New(fmt.Sprintf("Error getting ssh credentials to authentify with git store: %s", sshCredsErr.Error()))
 	}
 
 	store.sshCreds = sshCreds
@@ -34,14 +34,22 @@ func (store *StoreGit[T]) Initialize() error {
 func (store *StoreGit[T]) ReadContent() (T, error) {
 	var content T
 
-	_, mem, cloneErr := git.MemCloneGitRepo(store.Config.Url, store.Config.Ref, 1, store.sshCreds)
+	repo, mem, cloneErr := git.MemCloneGitRepo(store.Config.Url, store.Config.Ref, 1, store.sshCreds)
 	if cloneErr != nil {
-		return content, cloneErr
+		return content, errors.New(fmt.Sprintf("Error cloning git store repo: %s", cloneErr.Error()))
+	}
+
+	if store.Config.AcceptedSignatures != "" {
+		verifyErr := gitutils.VerifyRepoSignatures(repo, store.Config.AcceptedSignatures)
+		if verifyErr != nil {
+			return content, errors.New(fmt.Sprintf("Error verifying git store repo signatures: %s", verifyErr.Error()))
+		}
 	}
 
 	exists, existsErr := mem.FileExists(path.Join(store.Config.Path, store.Key))
+
 	if existsErr != nil {
-		return content, existsErr
+		return content, errors.New(fmt.Sprintf("Error checking git store content existence: %s", existsErr.Error()))
 	}
 
 	if !exists {
@@ -50,12 +58,12 @@ func (store *StoreGit[T]) ReadContent() (T, error) {
 
 	rawContent, getErr := mem.GetFileContent(path.Join(store.Config.Path, store.Key))
 	if getErr != nil {
-		return content, getErr
+		return content, errors.New(fmt.Sprintf("Error reading git store content: %s", getErr.Error()))
 	}
 
 	desErr := yaml.Unmarshal([]byte(rawContent), &content)
 	if desErr != nil {
-		return content, errors.New(fmt.Sprintf("Error deserializing content info: %s", desErr.Error()))
+		return content, errors.New(fmt.Sprintf("Error deserializing git store content: %s", desErr.Error()))
 	}
 
 	return content, nil
@@ -63,19 +71,26 @@ func (store *StoreGit[T]) ReadContent() (T, error) {
 
 func (store *StoreGit[T]) WriteContent(content T) error {
 	pushErr := git.PushChanges(func() (*git.GitRepository, error) {
-		output, err := yaml.Marshal(&content)
-		if err != nil {
-			return nil, errors.New(fmt.Sprintf("Error serializing the content info: %s", err.Error()))
+		output, serErr := yaml.Marshal(&content)
+		if serErr != nil {
+			return nil, errors.New(fmt.Sprintf("Error serializing git store content: %s", serErr.Error()))
 		}
 		
 		repo, mem, cloneErr := git.MemCloneGitRepo(store.Config.Url, store.Config.Ref, 1, store.sshCreds)
 		if cloneErr != nil {
-			return nil, cloneErr
+			return nil, errors.New(fmt.Sprintf("Error cloning git store repo: %s", cloneErr.Error()))
 		}
-	
+
+		if store.Config.AcceptedSignatures != "" {
+			verifyErr := gitutils.VerifyRepoSignatures(repo, store.Config.AcceptedSignatures)
+			if verifyErr != nil {
+				return nil, errors.New(fmt.Sprintf("Error verifying git store repo signatures: %s", verifyErr.Error()))
+			}
+		}
+
 		setErr := mem.SetFileContent(path.Join(store.Config.Path, store.Key), string(output))
 		if setErr != nil {
-			return nil, setErr
+			return nil, errors.New(fmt.Sprintf("Error writing git store content: %s", setErr.Error()))
 		}
 
 		var signature *git.CommitSignatureKey
@@ -83,7 +98,7 @@ func (store *StoreGit[T]) WriteContent(content T) error {
 		if store.Config.CommitSignature.Key != "" {
 			signature, signatureErr = git.GetSignatureKey(store.Config.CommitSignature.Key, store.Config.CommitSignature.Passphrase)
 			if signatureErr != nil {
-				return nil, signatureErr
+				return nil, errors.New(fmt.Sprintf("Error getting signature key to commit to git store: %s", signatureErr.Error()))
 			}
 		}
 
@@ -98,7 +113,7 @@ func (store *StoreGit[T]) WriteContent(content T) error {
 			},
 		)
 		if comErr != nil {
-			return nil, comErr
+			return nil, errors.New(fmt.Sprintf("Error commiting change to git store: %s", comErr.Error()))
 		}
 
 		if !changes {

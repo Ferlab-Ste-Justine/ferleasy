@@ -24,11 +24,17 @@ func generateListCmd(confPath *string) *cobra.Command {
 			releases, releasesErr := relStore.ReadContent()
 			AbortOnErr(releasesErr)
 
+			idx := 0
 			for _, release := range releases {
+				if idx == 0 {
+					fmt.Println("--------------------")
+				}
 				fmt.Printf("Environment: %s\nService: %s\nRelease: %s\n", release.Environment, release.Service, release.Release)
 				for key, val := range release.CustomParams {
 					fmt.Printf("\tParam %s: %s", key, val)
 				}
+				fmt.Println("--------------------")
+				idx += 1
 			}
 		},
 	}

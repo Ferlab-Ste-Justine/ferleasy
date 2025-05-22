@@ -26,10 +26,15 @@ func generateRemoveCmd(confPath *string) *cobra.Command {
 				Release: release,
 			}
 
+			removedEntry.ApplyPolicyDefaults(&conf.EntryPolicy)
+
 			relStore, relStoreErr := store.GetStore[state.Entries](&conf.ReleasesStore, "releases.yml", "releases.lock")
 			AbortOnErr(relStoreErr)
 
 			opErr := store.ProcessStoreContent[state.Entries](func(entries state.Entries) (state.Entries, error) {
+				if entries == nil {
+					entries = state.Entries(map[string]state.Entry{})
+				}
 				entries.Remove(removedEntry)
 				return entries, nil
 			}, relStore)

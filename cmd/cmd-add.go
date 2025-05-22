@@ -35,6 +35,9 @@ func generateAddCmd(confPath *string) *cobra.Command {
 			AbortOnErr(policyErr)
 
 			opErr := store.ProcessStoreContent[state.Entries](func(entries state.Entries) (state.Entries, error) {
+				if entries == nil {
+					entries = state.Entries(map[string]state.Entry{})
+				}
 				entries.Add(newEntry)
 				return entries, nil
 			}, relStore)

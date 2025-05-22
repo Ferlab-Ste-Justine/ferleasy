@@ -28,12 +28,12 @@ func (store *StoreS3[T]) ReadContent() (T, error) {
 
 	conn, connErr := s3.Connect(store.Config)
 	if connErr != nil {
-		return content, connErr
+		return content, errors.New(fmt.Sprintf("Error creating s3 store client: %s", connErr.Error()))
 	}
 
 	exists, existsErr := s3.KeyExists(store.Config.Bucket, path.Join(store.Config.Path, "state.yml"), conn)
 	if existsErr != nil {
-		return content, existsErr
+		return content, errors.New(fmt.Sprintf("Error checking s3 store content existence: %s", existsErr.Error()))
 	}
 
 	if !exists {
@@ -42,17 +42,17 @@ func (store *StoreS3[T]) ReadContent() (T, error) {
 
 	objRead, readErr := conn.GetObject(context.Background(), store.Config.Bucket, path.Join(store.Config.Path, store.Key), minio.GetObjectOptions{})
 	if readErr != nil {
-		return content, readErr
+		return content, errors.New(fmt.Sprintf("Error getting s3 store content: %s", readErr.Error()))
 	}
 
     data, transfErr := io.ReadAll(objRead)
     if transfErr != nil {
-        return content, transfErr
+        return content, errors.New(fmt.Sprintf("Error downloading s3 store content: %s", transfErr.Error()))
     }
 
 	unmarErr := yaml.Unmarshal(data, &content)
 	if unmarErr != nil {
-		return content, errors.New(fmt.Sprintf("Error deserializing the content info: %s", unmarErr.Error()))
+		return content, errors.New(fmt.Sprintf("Error deserializing s3 store content: %s", unmarErr.Error()))
 	}
 
 	return content, nil
@@ -61,12 +61,12 @@ func (store *StoreS3[T]) ReadContent() (T, error) {
 func (store *StoreS3[T]) WriteContent(content T) error {
 	output, err := yaml.Marshal(&content)
 	if err != nil {
-		return errors.New(fmt.Sprintf("Error serializing the content info: %s", err.Error()))
+		return errors.New(fmt.Sprintf("Error serializing s3 store content: %s", err.Error()))
 	}
 
 	conn, connErr := s3.Connect(store.Config)
 	if connErr != nil {
-		return connErr
+		return errors.New(fmt.Sprintf("Error creating s3 store client: %s", connErr.Error()))
 	}
 
 	_, putErr := conn.PutObject(
@@ -77,8 +77,11 @@ func (store *StoreS3[T]) WriteContent(content T) error {
 		int64(len(output)),
 		minio.PutObjectOptions{},
 	)
+	if putErr != nil {
+		return errors.New(fmt.Sprintf("Error writing s3 store content: %s", putErr.Error()))
+	}
 
-	return putErr
+	return nil
 }
 
 func (st *StoreS3[T]) Lock() error {

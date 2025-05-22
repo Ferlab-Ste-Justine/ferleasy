@@ -1,0 +1,1 @@
+(cd ..; go build .; cp ferleasy usage-example/)

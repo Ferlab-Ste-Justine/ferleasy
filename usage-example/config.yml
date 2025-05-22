@@ -1,0 +1,62 @@
+releases_store:
+  git:
+    url: git@github.com:<YourGithubUser>/ferleasy-playground.git
+    ref: main
+    path: "qa/releases"
+    auth:
+      ssh_key: "~/.ssh/id_rsa"
+      known_key: "known_host"
+    commit_message: "Updating releases"
+    push_retries: 3
+    push_retry_interval: 30s
+entry_policy:
+  default:
+    environment: qa
+    service: fhir
+    custom_parameters:
+      Org: ferlab
+      Project: top-secret
+  fixed:
+    environment: qa
+    service: fhir
+    custom_parameters:
+      Org: ferlab
+sync:
+  state_store:
+    git:
+      url: git@github.com:<YourGithubUser>/ferleasy-playground.git
+      ref: main
+      path: "qa/state"
+      auth:
+        ssh_key: "~/.ssh/id_rsa"
+        known_key: "known_host"
+      commit_message: "Syncing state"
+      push_retries: 3
+      push_retry_interval: 30s
+  commit_message: "{{ if eq .Operation \"release\" }}Adding{{ else }}Removing{{ end }} release {{.Release}} of service {{.Service}}"
+  push_retries: 3
+  push_retry_interval: 30s
+  orchestrations:
+    - type: fluxcd
+      repo: "git@github.com:<YourGithubUser>/ferlease-playground.git"
+      ref: main
+      git_auth:
+        ssh_key: "~/.ssh/id_rsa"
+        known_key: "known_host"
+      template_directory: "{{.RepoDir}}/ferlease-templates/{{.Service}}/kubernetes"
+    - type: terraform
+      repo: "git@github.com:<YourGithubUser>/ferlease-playground.git"
+      ref: main
+      git_auth:
+        ssh_key: "~/.ssh/id_rsa"
+        known_key: "known_host"
+      template_directory: "{{.RepoDir}}/ferlease-templates/{{.Service}}/postgres-db"
+      commit_message: "{{ if eq .Operation \"release\" }}Adding{{ else }}Removing{{ end }} database {{.Release}} of service {{.Service}}"
+    - type: terraform
+      repo: "git@github.com:Magnitus-/ferlease-playground.git"
+      ref: main
+      git_auth:
+        ssh_key: "~/.ssh/id_rsa"
+        known_key: "known_host"
+      template_directory: "{{.RepoDir}}/ferlease-templates/{{.Service}}/vault-secrets"
+      commit_message: "{{ if eq .Operation \"release\" }}Adding{{ else }}Removing{{ end }} database secrets {{.Release}} of service {{.Service}}"

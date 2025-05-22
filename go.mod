@@ -4,14 +4,12 @@ go 1.23.4
 
 require (
 	github.com/Ferlab-Ste-Justine/etcd-sdk v0.13.0
-	github.com/Ferlab-Ste-Justine/ferlease v0.4.0
+	github.com/Ferlab-Ste-Justine/ferlease v0.5.0
 	github.com/Ferlab-Ste-Justine/git-sdk v0.9.0
 	github.com/minio/minio-go/v7 v7.0.91
 	github.com/spf13/cobra v1.9.1
 	gopkg.in/yaml.v2 v2.4.0
 )
-
-replace github.com/Ferlab-Ste-Justine/ferlease v0.4.0 => ../ferlease
 
 require (
 	dario.cat/mergo v1.0.0 // indirect

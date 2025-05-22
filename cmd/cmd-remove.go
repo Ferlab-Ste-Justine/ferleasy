@@ -25,6 +25,7 @@ func generateRemoveCmd(confPath *string) *cobra.Command {
 				Service: service,
 				Release: release,
 			}
+			removedEntry.CustomParams = map[string]string{}
 
 			removedEntry.ApplyPolicyDefaults(&conf.EntryPolicy)
 

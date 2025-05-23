@@ -12,7 +12,7 @@ type EtcdConfig struct {
 	RetryInterval     time.Duration `yaml:"retry_interval"`
 	Retries           uint64
 	Auth              Auth
-	LockTtl           int64
+	LockTtl           int64         `yaml:"lock_ttl"`
 }
 
 func (conf *EtcdConfig) IsDefined() bool {

@@ -121,6 +121,7 @@ func (ent *Entries) Diff(oth *Entries) EntriesDiff {
 		othEntry, ok := (*oth)[key]
 		if !ok {
 			diff.Remove = append(diff.Remove, entry)
+			continue
 		}
 
 		if !entry.Equals(&othEntry) {

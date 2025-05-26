@@ -32,8 +32,11 @@ func generateSyncCmd(confPath *string) *cobra.Command {
 				AbortOnErr(policyErr)
 			}
 
-			opErr := store.ProcessStoreContent[state.State](func(state state.State) (state.State, error) {
-				diff := state.Entries.Diff(&entries)
+			opErr := store.ProcessStoreContent[state.State](func(st state.State) (state.State, error) {
+				if st.Entries == nil {
+					st.Entries = state.Entries(map[string]state.Entry{})
+				}
+				diff := st.Entries.Diff(&entries)
 
 				for _, entry := range diff.Remove {
 					ferConf := &ferconf.Config{
@@ -54,7 +57,7 @@ func generateSyncCmd(confPath *string) *cobra.Command {
 					teardownErr := fercmd.Teardown(ferConf)
 					AbortOnErr(teardownErr)
 
-					state.Entries.Remove(entry)
+					st.Entries.Remove(entry)
 				}
 
 				for _, entry := range diff.Update {
@@ -76,7 +79,7 @@ func generateSyncCmd(confPath *string) *cobra.Command {
 					releaseErr := fercmd.Release(ferConf)
 					AbortOnErr(releaseErr)
 
-					state.Entries.Add(entry)
+					st.Entries.Add(entry)
 				}
 
 				for _, entry := range diff.Add {
@@ -98,10 +101,10 @@ func generateSyncCmd(confPath *string) *cobra.Command {
 					releaseErr := fercmd.Release(ferConf)
 					AbortOnErr(releaseErr)
 
-					state.Entries.Add(entry)
+					st.Entries.Add(entry)
 				}
 
-				return state, nil
+				return st, nil
 			}, stateStore)
 			AbortOnErr(opErr)
 		},

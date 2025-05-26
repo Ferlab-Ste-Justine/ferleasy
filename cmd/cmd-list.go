@@ -31,7 +31,7 @@ func generateListCmd(confPath *string) *cobra.Command {
 				}
 				fmt.Printf("Environment: %s\nService: %s\nRelease: %s\n", release.Environment, release.Service, release.Release)
 				for key, val := range release.CustomParams {
-					fmt.Printf("\tParam %s: %s", key, val)
+					fmt.Printf("\tParam %s: %s\n", key, val)
 				}
 				fmt.Println("--------------------")
 				idx += 1

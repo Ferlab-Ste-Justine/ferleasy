@@ -20,7 +20,7 @@ type StoreS3[T any] struct {
 }
 
 func (store *StoreS3[T]) Initialize() error {
-	return nil
+	return store.Config.Auth.GetKeyAuth()
 }
 
 func (store *StoreS3[T]) ReadContent() (T, error) {
